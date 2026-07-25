@@ -5,7 +5,6 @@ West Bengal Land Surface Temperature Viewer (FastAPI)
 
 
 
-- check Features.md file we need to implement this features step by step in our project
 
 ## Setup
 
@@ -27,6 +26,14 @@ pip install -r requirements.txt
 ```bash
 uvicorn Main.run:app --reload --port 8000
 ```
+
+
+
+
+- check feature_to_add.md file we need to implement this features step by step in our project
+- then implement this features step by step 
+
+
 
 Put your Landsat `..._ST_B10.TIF` file somewhere accessible, then either:
 
