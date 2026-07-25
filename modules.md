@@ -1,0 +1,31 @@
+# Python Modules Used in the Project
+
+- PIL
+- __future__
+- anthropic
+- base64
+- datetime
+- dotenv
+- ee
+- email
+- fastapi
+- hashlib
+- hmac
+- httpx
+- io
+- json
+- logging
+- matplotlib
+- numpy
+- os
+- pathlib
+- pydantic
+- rasterio
+- re
+- secrets
+- smtplib
+- sqlite3
+- starlette
+- time
+- typing
+- uvicorn

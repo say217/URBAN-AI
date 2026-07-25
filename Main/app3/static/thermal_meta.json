@@ -1,0 +1,19 @@
+{
+  "source_file": "LC08_L2SP_139044_20260601_20260612_02_T1_ST_B10.tiff",
+  "bounds": {
+    "min_lat": 22.049652399990507,
+    "max_lat": 24.161571786956625,
+    "min_lon": 86.17396584622978,
+    "max_lon": 88.42146482779005
+  },
+  "center": {
+    "lat": 23.105612093473567,
+    "lon": 87.29771533700992
+  },
+  "temperature_celsius": {
+    "min": -1.4,
+    "max": 59.97
+  },
+  "overlay_image_url": "/app3/static/thermal_overlay.png",
+  "valid_pixel_count": 1722523
+}

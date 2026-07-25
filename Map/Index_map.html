@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kolkata — Atlas View</title>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" rel="stylesheet" />
+<script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
+
+<style>
+  :root{
+    --ink:#0e1614;
+    --panel:#12211c;
+    --brass:#c9a15c;
+    --brass-soft:#e4c98a;
+    --mist:#dce7e2;
+    --sub:#8fa69d;
+    --line:rgba(220,231,226,0.10);
+    --glow:rgba(201,161,92,0.35);
+    --font-display:'Fraunces', Georgia, serif;
+    --font-body:'Inter', -apple-system, sans-serif;
+  }
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Inter:wght@400;500;600&display=swap');
+
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0; height:100%; background:var(--ink); color:var(--mist);
+    font-family:var(--font-body);
+    overflow:hidden;
+  }
+
+  .frame{
+    display:flex; flex-direction:column; height:100vh;
+  }
+
+  header{
+    padding:18px 22px 14px;
+    display:flex; align-items:flex-end; justify-content:space-between;
+    border-bottom:1px solid var(--line);
+    background:linear-gradient(180deg, rgba(18,33,28,0.9), rgba(18,33,28,0.4));
+    flex-shrink:0;
+  }
+  .title-block .eyebrow{
+    font-size:10px; letter-spacing:0.22em; text-transform:uppercase;
+    color:var(--brass); margin:0 0 4px; font-weight:600;
+  }
+  .title-block h1{
+    margin:0; font-family:var(--font-display); font-weight:600;
+    font-size:24px; color:#f4efe2; letter-spacing:0.01em;
+  }
+  .title-block .coord{
+    font-size:11px; color:var(--sub); margin-top:3px; letter-spacing:0.03em;
+  }
+
+  .switch{
+    display:flex; gap:2px; background:rgba(0,0,0,0.25);
+    padding:3px; border-radius:11px; border:1px solid var(--line);
+  }
+  .switch button{
+    appearance:none; border:none; background:transparent; color:var(--sub);
+    font-family:var(--font-body); font-size:12.5px; font-weight:500;
+    padding:8px 15px; border-radius:8px; cursor:pointer;
+    transition:all .25s ease; letter-spacing:0.02em;
+    white-space:nowrap;
+  }
+  .switch button:hover{ color:var(--mist); }
+  .switch button.on{
+    background:linear-gradient(160deg, var(--brass-soft), var(--brass));
+    color:#1b1408; font-weight:600;
+    box-shadow:0 2px 12px var(--glow);
+  }
+
+  .stage{ position:relative; flex:1; min-height:0; }
+  .layer{
+    position:absolute; inset:0; opacity:0; pointer-events:none;
+    transition:opacity .45s ease;
+  }
+  .layer.on{ opacity:1; pointer-events:auto; }
+  #map-vector, #map-sat{ background:#12211c; }
+  #map-3d{ background:#12211c; }
+
+  .badge{
+    position:absolute; left:16px; bottom:16px; z-index:500;
+    background:rgba(14,22,20,0.72); backdrop-filter:blur(6px);
+    border:1px solid var(--line); border-radius:9px;
+    padding:8px 12px; font-size:11px; color:var(--sub);
+    display:flex; align-items:center; gap:7px;
+    pointer-events:none;
+  }
+  .badge .dot{ width:6px; height:6px; border-radius:50%; background:var(--brass); flex-shrink:0; }
+  .badge b{ color:var(--mist); font-weight:600; }
+
+  .hint{
+    position:absolute; right:16px; bottom:16px; z-index:500;
+    background:rgba(14,22,20,0.72); backdrop-filter:blur(6px);
+    border:1px solid var(--line); border-radius:9px;
+    padding:7px 12px; font-size:10.5px; color:var(--sub);
+    letter-spacing:0.02em;
+  }
+
+  .leaflet-control-zoom, .maplibregl-ctrl-top-right{ margin-top:16px !important; }
+  .leaflet-control-zoom a{
+    background:rgba(14,22,20,0.85) !important; color:var(--mist) !important;
+    border:1px solid var(--line) !important;
+  }
+  .leaflet-control-attribution{
+    background:rgba(14,22,20,0.7) !important; color:var(--sub) !important;
+    font-size:9.5px !important;
+  }
+  .leaflet-control-attribution a{ color:var(--brass) !important; }
+  .maplibregl-ctrl-attrib{ background:rgba(14,22,20,0.7) !important; }
+  .maplibregl-ctrl-attrib a{ color:var(--brass) !important; }
+  .maplibregl-ctrl-attrib-inner{ color:var(--sub) !important; font-size:9.5px !important; }
+
+  @media (max-width:640px){
+    header{ flex-direction:column; align-items:flex-start; gap:12px; }
+    .title-block h1{ font-size:20px; }
+    .switch{ align-self:stretch; }
+    .switch button{ flex:1; padding:9px 6px; font-size:11.5px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="frame">
+  <header>
+    <div class="title-block">
+      <p class="eyebrow">City Atlas</p>
+      <h1>Kolkata</h1>
+      <div class="coord">22.5726° N, 88.3639° E · West Bengal, India</div>
+    </div>
+    <div class="switch">
+      <button data-mode="vector" class="on">Vector</button>
+      <button data-mode="threeD">3D Tilt</button>
+      <button data-mode="sat">Satellite</button>
+    </div>
+  </header>
+
+  <div class="stage">
+    <div id="map-vector" class="layer on"></div>
+    <div id="map-3d" class="layer"></div>
+    <div id="map-sat" class="layer"></div>
+
+    <div class="badge"><span class="dot"></span><span id="badgeText"><b>Vector</b> · clean cartographic style</span></div>
+    <div class="hint" id="hintText">Scroll to zoom · drag to pan</div>
+  </div>
+</div>
+
+<script>
+  const KOL = [22.5726, 88.3639];
+  let vectorMap, satMap, map3d, initted3d = false;
+
+  // ---------- Vector map (Leaflet + CartoDB Positron, no key) ----------
+  vectorMap = L.map('map-vector', { zoomControl:true, attributionControl:true }).setView(KOL, 13);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; OpenStreetMap, &copy; CARTO',
+    subdomains: 'abcd', maxZoom: 20
+  }).addTo(vectorMap);
+  L.circleMarker(KOL, { radius:6, color:'#c9a15c', fillColor:'#e4c98a', fillOpacity:1, weight:2 })
+    .addTo(vectorMap).bindPopup('<b>Kolkata</b><br>City center');
+
+  // ---------- Satellite map (Leaflet + Esri World Imagery, no key) ----------
+  satMap = L.map('map-sat', { zoomControl:true, attributionControl:true }).setView(KOL, 13);
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+    attribution: 'Tiles &copy; Esri — Source: Esri, Maxar, Earthstar Geographics',
+    maxZoom: 19
+  }).addTo(satMap);
+  L.circleMarker(KOL, { radius:6, color:'#c9a15c', fillColor:'#e4c98a', fillOpacity:1, weight:2 })
+    .addTo(satMap).bindPopup('<b>Kolkata</b><br>City center');
+
+  // ---------- 3D map (MapLibre GL + OpenFreeMap "liberty" style, no key) ----------
+  function init3D(){
+    if (initted3d) return;
+    initted3d = true;
+    map3d = new maplibregl.Map({
+      container: 'map-3d',
+      style: 'https://tiles.openfreemap.org/styles/liberty',
+      center: [KOL[1], KOL[0]],
+      zoom: 15.2,
+      pitch: 58,
+      bearing: -17,
+      antialias: true
+    });
+    map3d.addControl(new maplibregl.NavigationControl({ visualizePitch:true }), 'top-right');
+    map3d.on('load', () => {
+      new maplibregl.Marker({ color:'#c9a15c' }).setLngLat([KOL[1], KOL[0]])
+        .setPopup(new maplibregl.Popup().setHTML('<b>Kolkata</b><br>City center'))
+        .addTo(map3d);
+      // gentle orbit for a premium reveal
+      let bearing = -17;
+      const spin = setInterval(() => {
+        bearing += 0.12;
+        map3d.setBearing(bearing);
+        if (bearing >= 45) clearInterval(spin);
+      }, 40);
+    });
+  }
+
+  // ---------- Tab switching ----------
+  const badges = {
+    vector: "<b>Vector</b> · clean cartographic style",
+    threeD: "<b>3D</b> · tilted perspective, live buildings",
+    sat: "<b>Satellite</b> · true image capture"
+  };
+  const hints = {
+    vector: "Scroll to zoom · drag to pan",
+    threeD: "Drag to orbit · right-click drag to tilt",
+    sat: "Scroll to zoom · drag to pan"
+  };
+
+  document.querySelectorAll('.switch button').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      document.querySelectorAll('.switch button').forEach(b=>b.classList.remove('on'));
+      btn.classList.add('on');
+      document.querySelectorAll('.layer').forEach(l=>l.classList.remove('on'));
+
+      const mode = btn.dataset.mode;
+      document.getElementById('badgeText').innerHTML = badges[mode];
+      document.getElementById('hintText').textContent = hints[mode];
+
+      if(mode === 'vector'){
+        document.getElementById('map-vector').classList.add('on');
+        setTimeout(()=>vectorMap.invalidateSize(), 60);
+      } else if(mode === 'sat'){
+        document.getElementById('map-sat').classList.add('on');
+        setTimeout(()=>satMap.invalidateSize(), 60);
+      } else {
+        document.getElementById('map-3d').classList.add('on');
+        init3D();
+        setTimeout(()=>{ if(map3d) map3d.resize(); }, 60);
+      }
+    });
+  });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+<title>GeoHeat — Live Thermal Overlay</title>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ request.url_for('static', path='css/style.css') }}" />
+</head>
+<body>
+
+  <!-- Map fills the viewport -->
+  <div id="map"></div>
+
+  <!-- Top HUD bar -->
+  <header class="hud-top">
+    <div class="brand">
+      <span class="brand-mark"></span>
+      <span class="brand-text">GEOHEAT<span class="brand-sub">/// THERMAL RECON</span></span>
+    </div>
+
+    <div class="locate-wrap">
+      <button id="locate-btn" class="locate-btn">
+        <span class="reticle"></span>
+        <span id="locate-label">LOCATE ME</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Left info panel -->
+  <aside class="panel panel-info" id="info-panel">
+    <div class="panel-row">
+      <span class="panel-label">STATUS</span>
+      <span class="panel-value" id="status-value">awaiting position…</span>
+    </div>
+    <div class="panel-row">
+      <span class="panel-label">CITY</span>
+      <span class="panel-value" id="city-value">—</span>
+    </div>
+    <div class="panel-row">
+      <span class="panel-label">REGION</span>
+      <span class="panel-value" id="region-value">—</span>
+    </div>
+    <div class="panel-divider"></div>
+    <div class="panel-row mono">
+      <span class="panel-label">LAT</span>
+      <span class="panel-value" id="lat-value">--.------</span>
+    </div>
+    <div class="panel-row mono">
+      <span class="panel-label">LON</span>
+      <span class="panel-value" id="lon-value">--.------</span>
+    </div>
+    <div class="panel-row mono">
+      <span class="panel-label">ACCURACY</span>
+      <span class="panel-value" id="acc-value">-- m</span>
+    </div>
+  </aside>
+
+  <!-- Layer switcher -->
+  <div class="panel panel-layers" id="layers-panel">
+    <div class="panel-title">BASE LAYER</div>
+    <label class="layer-option">
+      <input type="radio" name="base" value="street" checked />
+      <span>Street (OSM)</span>
+    </label>
+    <label class="layer-option">
+      <input type="radio" name="base" value="satellite" />
+      <span>Satellite</span>
+    </label>
+    <div class="panel-divider"></div>
+    <div class="panel-title">OVERLAY</div>
+    <label class="layer-option">
+      <input type="checkbox" id="heat-toggle" checked />
+      <span>Heat signature (LST)</span>
+    </label>
+    <div class="opacity-row">
+      <span class="mini-label">opacity</span>
+      <input type="range" id="heat-opacity" min="0" max="100" value="70" />
+    </div>
+  </div>
+
+  <!-- Legend / thermal strip -->
+  <div class="panel panel-legend" id="legend-panel">
+    <div class="panel-title">LAND SURFACE TEMP</div>
+    <div class="legend-strip"></div>
+    <div class="legend-scale">
+      <span id="legend-min">0°C</span>
+      <span id="legend-max">45°C</span>
+    </div>
+    <div class="legend-caption">MODIS/061/MOD11A2 · 8-day composite</div>
+  </div>
+
+  <!-- Loading / message toast -->
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="{{ request.url_for('static', path='js/app.js') }}"></script>
+</body>
+</html>

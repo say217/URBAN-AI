@@ -1,0 +1,11 @@
+# Google Earth Engine service account
+service-account.json
+
+# Dataset directory
+Data/
+
+# Environment variables
+.env
+
+# Python virtual environment
+.venv/

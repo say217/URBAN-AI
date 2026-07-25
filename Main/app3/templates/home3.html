@@ -1,0 +1,1709 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Thermal Intelligence Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap"
+    rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    :root {
+      --bg-app: #212121;
+      --bg-panel: #171717;
+      --bg-raised: #2f2f2f;
+      --bg-input: #2f2f2f;
+      --border: rgba(255, 255, 255, 0.1);
+      --border-strong: rgba(255, 255, 255, 0.2);
+      --text-0: #ececec;
+      --text-ash: #d1d5db;
+      --text-1: #9b9b9b;
+      --text-2: #6b6b6b;
+      --accent: #10a37f;
+      --accent-rgb: 16, 163, 127;
+      --accent-soft: rgba(16, 163, 127, 0.15);
+      --accent-strong: #1a7f64;
+      --accent-strong-rgb: 26, 127, 100;
+      --accent-ink: #ffffff;
+      --user-bubble: #2f2f2f;
+      --radius-lg: 20px;
+      --radius-md: 14px;
+      --radius-sm: 9px;
+      --shadow-mat: 0 10px 30px -10px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.03);
+      --ease: cubic-bezier(0.4, 0, 0.2, 1);
+
+      /* Layout tokens driving the collapsible sidebar + widened chat/map */
+      --sidebar-w: 248px;
+      --sidebar-w-collapsed: 60px;
+      --chat-w: 460px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      height: 100%;
+      margin: 0;
+      background: var(--bg-app);
+      color: var(--text-0);
+      font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      overflow: hidden;
+      font-weight: 400;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(1100px 550px at 12% -8%, rgba(var(--accent-rgb), 0.06), transparent 60%),
+        radial-gradient(900px 480px at 100% 105%, rgba(var(--accent-strong-rgb), 0.045), transparent 60%);
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    ::-webkit-scrollbar {
+      width: 7px;
+      height: 7px;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--border-strong);
+      border-radius: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .app-shell {
+      position: relative;
+      z-index: 1;
+      height: 100vh;
+      display: grid;
+      grid-template-rows: auto 1fr;
+      gap: 0;
+      padding: 0;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      padding: 10px 16px 10px 14px;
+      background: var(--bg-panel);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+      flex: 0 0 auto;
+      padding-right: 16px;
+      border-right: 1px solid var(--border);
+    }
+
+    .brand-mark {
+      width: 27px;
+      height: 27px;
+      border-radius: 8px;
+      background: linear-gradient(150deg, var(--accent) 0%, #2e2b6b 100%);
+      flex: 0 0 auto;
+    }
+
+    .brand-copy {
+      min-width: 0;
+    }
+
+    .brand-title {
+      font-size: 12.5px;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+      line-height: 1.25;
+      color: var(--text-0);
+    }
+
+    .brand-sub {
+      margin-top: 1px;
+      color: var(--text-2);
+      font-size: 9.5px;
+      font-family: "JetBrains Mono", monospace;
+      letter-spacing: 0.02em;
+    }
+
+    .topbar-status {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      flex: 0 0 auto;
+      padding: 5px 11px;
+      border-radius: 999px;
+      background: var(--bg-raised);
+      border: 1px solid var(--border);
+      font-size: 10.5px;
+      color: var(--text-1);
+      font-family: "JetBrains Mono", monospace;
+    }
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--text-2);
+      flex: 0 0 auto;
+    }
+
+    .status-dot.on {
+      background: var(--accent-strong);
+      box-shadow: 0 0 6px rgba(var(--accent-strong-rgb), 0.7);
+    }
+
+    .top-links {
+      display: flex;
+      gap: 2px;
+      margin-left: auto;
+      background: var(--bg-raised);
+      border: 1px solid var(--border);
+      border-radius: 11px;
+      padding: 3px;
+      flex: 0 0 auto;
+    }
+
+    .top-links a {
+      padding: 6px 13px;
+      border-radius: 8px;
+      color: var(--text-2);
+      font-size: 11px;
+      font-weight: 500;
+      transition: color 0.15s ease, background 0.15s ease;
+    }
+
+    .top-links a:hover {
+      color: var(--text-0);
+    }
+
+    .top-links a.active {
+      color: var(--text-0);
+      background: var(--bg-input);
+      box-shadow: inset 0 0 0 1px var(--border-strong);
+    }
+
+    .main {
+      min-height: 0;
+      display: grid;
+      grid-template-columns: var(--sidebar-w) minmax(0, 1fr) var(--chat-w);
+      gap: 0;
+      transition: grid-template-columns 0.4s var(--ease);
+    }
+
+    .main.sidebar-collapsed {
+      --sidebar-w: var(--sidebar-w-collapsed);
+    }
+
+    .panel {
+      background: linear-gradient(165deg, var(--bg-panel) 0%, #08080a 100%);
+      border: 1px solid var(--border);
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    .sidebar,
+    .chat-panel {
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    .panel-head {
+      padding: 14px 15px 10px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .sidebar-panel-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 8px;
+      transition: opacity 0.2s ease;
+    }
+
+    .sidebar-head-copy {
+      min-width: 0;
+      overflow: hidden;
+      transition: opacity 0.2s ease;
+    }
+
+    .sidebar-toggle-btn {
+      flex: 0 0 auto;
+      width: 24px;
+      height: 24px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--bg-raised);
+      color: var(--text-1);
+      cursor: pointer;
+      font-size: 12px;
+      display: grid;
+      place-items: center;
+      transition: all 0.15s ease, transform 0.4s var(--ease);
+    }
+
+    .sidebar-toggle-btn:hover {
+      color: var(--accent-strong);
+      border-color: var(--border-strong);
+      background: var(--bg-input);
+    }
+
+    .sidebar.collapsed .sidebar-toggle-btn {
+      transform: rotate(180deg);
+    }
+
+    .sidebar.collapsed .sidebar-head-copy,
+    .sidebar.collapsed .sidebar-scroll {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .panel-title {
+      font-size: 10px;
+      color: var(--text-2);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      font-weight: 600;
+      margin-bottom: 6px;
+      font-family: "JetBrains Mono", monospace;
+      white-space: nowrap;
+    }
+
+    .panel-subtitle {
+      font-size: 11.5px;
+      color: var(--text-1);
+      line-height: 1.5;
+    }
+
+    .sidebar-scroll {
+      overflow-y: auto;
+      min-height: 0;
+      transition: opacity 0.2s ease;
+    }
+
+    /* ---------- Sidebar: stats (compacted) ---------- */
+    .stats {
+      display: grid;
+      gap: 7px;
+      padding: 11px 11px 4px;
+    }
+
+    .stat {
+      padding: 9px 10px;
+      border-radius: 11px;
+      background: linear-gradient(165deg, var(--bg-raised) 0%, var(--bg-panel) 100%);
+      border: 1px solid var(--border);
+      min-width: 0;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.02);
+      transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+    }
+
+    .stat:hover {
+      transform: translateY(-2px);
+      border-color: var(--border-strong);
+      box-shadow: var(--shadow-mat);
+    }
+
+    .stat-label {
+      font-size: 8.5px;
+      color: var(--text-2);
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      font-family: "JetBrains Mono", monospace;
+      margin-bottom: 4px;
+    }
+
+    .stat-value {
+      font-size: 13px;
+      font-weight: 600;
+      line-height: 1.3;
+      color: var(--text-0);
+    }
+
+    .stat-value.ready {
+      color: var(--accent-strong);
+    }
+
+    .stat-value.filename {
+      font-size: 10px;
+      font-weight: 500;
+      font-family: "JetBrains Mono", monospace;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      word-break: break-all;
+      line-height: 1.45;
+      cursor: default;
+    }
+
+    .stat-meta {
+      margin-top: 4px;
+      color: var(--text-2);
+      font-size: 9.5px;
+      line-height: 1.5;
+    }
+
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 7px;
+      padding: 4px 11px 11px;
+    }
+
+    .kpi {
+      padding: 8px 9px;
+      border-radius: 10px;
+      background: linear-gradient(165deg, var(--bg-raised) 0%, var(--bg-panel) 100%);
+      border: 1px solid var(--border);
+      min-width: 0;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.02);
+      transition: transform 0.25s ease, border-color 0.25s ease;
+    }
+
+    .kpi:hover {
+      transform: translateY(-2px);
+      border-color: var(--border-strong);
+    }
+
+    .kpi-name {
+      font-size: 8px;
+      color: var(--text-2);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      font-family: "JetBrains Mono", monospace;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .kpi-num {
+      margin-top: 4px;
+      font-size: 12.5px;
+      font-weight: 600;
+      color: var(--text-0);
+      word-break: break-word;
+    }
+
+    .insights-mini {
+      padding: 3px 11px 13px;
+      display: grid;
+      gap: 6px;
+    }
+
+    .insight-mini {
+      border-radius: 11px;
+      border: 1px solid var(--border);
+      background: var(--bg-raised);
+      padding: 9px 10px;
+    }
+
+    .insight-mini-label {
+      font-size: 8.5px;
+      color: var(--text-2);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      font-family: "JetBrains Mono", monospace;
+      margin-bottom: 4px;
+    }
+
+    .insight-mini-value {
+      font-size: 10.5px;
+      line-height: 1.5;
+      color: var(--text-1);
+    }
+
+    /* ---------- Map ---------- */
+    .map-panel {
+      position: relative;
+      min-height: 0;
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      border: 1px solid var(--border);
+      background: #07080a;
+    }
+
+    #map {
+      position: absolute;
+      inset: 0;
+      background: #07080a;
+    }
+
+    #map.draw-active {
+      cursor: crosshair;
+    }
+
+    .leaflet-control-layers {
+      background: var(--bg-raised) !important;
+      color: var(--text-0) !important;
+      border: 1px solid var(--border) !important;
+    }
+
+    .leaflet-control-layers-toggle {
+      filter: invert(1);
+    }
+
+    .leaflet-bar a {
+      background: var(--bg-raised) !important;
+      color: var(--text-0) !important;
+      border-bottom: 1px solid var(--border) !important;
+    }
+
+    .map-overlay {
+      position: absolute;
+      inset: 14px 14px auto 14px;
+      z-index: 500;
+      display: grid;
+      grid-template-columns: 1.35fr 1fr 0.7fr;
+      gap: 10px;
+      pointer-events: none;
+    }
+
+    .overlay-card {
+      pointer-events: auto;
+      background: rgba(10, 10, 13, 0.8);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 12px 13px;
+      backdrop-filter: blur(14px);
+      transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+
+    .overlay-card:hover {
+      transform: translateY(-1px);
+      border-color: var(--border-strong);
+    }
+
+    .overlay-card strong {
+      display: block;
+      font-size: 12px;
+      margin-bottom: 5px;
+      color: var(--text-0);
+      font-weight: 600;
+    }
+
+    .overlay-card span {
+      display: block;
+      color: var(--text-1);
+      font-size: 11px;
+      line-height: 1.5;
+    }
+
+    .overlay-card.hud-card {
+      padding: 6px 8px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 4px;
+    }
+
+    .hud-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .hud-icon-svg {
+      width: 13px;
+      height: 13px;
+      flex: 0 0 auto;
+      color: var(--text-2);
+    }
+
+    .hud-text-group {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .hud-label {
+      font-size: 8px;
+      color: var(--text-2);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      line-height: 1;
+    }
+
+    .hud-value {
+      font-size: 11.5px;
+      font-weight: 500;
+      color: var(--text-0);
+      line-height: 1;
+    }
+
+    .map-toolbar {
+      position: absolute;
+      right: 14px;
+      bottom: 14px;
+      z-index: 500;
+      display: flex;
+      gap: 6px;
+      background: rgba(10, 10, 13, 0.82);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 6px;
+      backdrop-filter: blur(14px);
+    }
+
+    .toolbar-btn {
+      width: 30px;
+      height: 30px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--bg-raised);
+      color: var(--text-1);
+      font-size: 14px;
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .toolbar-btn:hover:not(:disabled) {
+      color: var(--accent-strong);
+      border-color: rgba(var(--accent-strong-rgb), 0.35);
+    }
+
+    .toolbar-btn:disabled {
+      opacity: 0.35;
+      cursor: default;
+    }
+
+    .toolbar-btn[data-active="true"] {
+      color: var(--accent-ink);
+      background: var(--accent-strong);
+      border-color: var(--accent-strong);
+    }
+
+    .legend {
+      position: absolute;
+      left: 14px;
+      bottom: 14px;
+      z-index: 500;
+      width: 240px;
+      background: rgba(10, 10, 13, 0.82);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 12px 13px;
+      backdrop-filter: blur(14px);
+    }
+
+    .legend-title {
+      font-size: 11px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: var(--text-0);
+    }
+
+    .legend-bar {
+      height: 10px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #1e3a8a, #2563eb, #06b6d4, #facc15, #f97316, #dc2626);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .legend-scale {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 7px;
+      color: var(--text-1);
+      font-family: "JetBrains Mono", monospace;
+      font-size: 10px;
+    }
+
+    .legend-labels {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 2px;
+      color: var(--text-2);
+      font-size: 9.5px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 10px;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      border: 1px solid rgba(var(--accent-strong-rgb), 0.28);
+      color: var(--accent-strong);
+      font-size: 10px;
+      font-family: "JetBrains Mono", monospace;
+      margin-bottom: 9px;
+    }
+
+    .badge::before {
+      content: "";
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent-strong);
+      box-shadow: 0 0 8px var(--accent-strong);
+    }
+
+    .no-data {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      padding: 30px;
+      color: var(--text-2);
+    }
+
+    .no-data-card {
+      max-width: 520px;
+      background: var(--bg-raised);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 22px;
+    }
+
+    .no-data-card strong {
+      display: block;
+      color: var(--text-0);
+      font-size: 16px;
+      margin-bottom: 8px;
+      font-weight: 600;
+    }
+
+    .no-data-card p {
+      margin: 0;
+      line-height: 1.6;
+      color: var(--text-1);
+      font-size: 12.5px;
+    }
+
+    .no-data-card code {
+      background: var(--bg-input);
+      padding: 2px 6px;
+      border-radius: 6px;
+      font-family: "JetBrains Mono", monospace;
+      font-size: 11.5px;
+      color: var(--accent-strong);
+    }
+
+    /* Draw-rectangle selection box */
+    .draw-selection {
+      position: absolute;
+      z-index: 600;
+      pointer-events: none;
+      border: 1.5px dashed var(--accent-strong);
+      background: rgba(var(--accent-strong-rgb), 0.12);
+      border-radius: 2px;
+      display: none;
+    }
+
+    .toast {
+      position: absolute;
+      bottom: 62px;
+      left: 50%;
+      transform: translateX(-50%) translateY(8px);
+      z-index: 700;
+      background: rgba(15, 15, 18, 0.94);
+      border: 1px solid var(--border-strong);
+      color: var(--text-0);
+      font-size: 11.5px;
+      padding: 9px 14px;
+      border-radius: 10px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease, transform 0.2s ease;
+      white-space: nowrap;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* ---------- Chat panel: minimal, compact ChatGPT-style ---------- */
+    .chat-panel .panel-title {
+      font-size: 10px;
+    }
+
+    .chat-panel .panel-subtitle {
+      font-size: 11.5px;
+    }
+
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px 18px 6px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .msg {
+      display: flex;
+      gap: 9px;
+      max-width: 100%;
+    }
+
+    .msg-avatar {
+      width: 22px;
+      height: 22px;
+      border-radius: 7px;
+      flex: 0 0 auto;
+      display: grid;
+      place-items: center;
+      font-size: 9.5px;
+      font-weight: 600;
+      margin-top: 1px;
+    }
+
+    .msg.assistant .msg-avatar {
+      background: var(--accent-soft);
+      color: var(--accent-strong);
+    }
+
+    .msg.user {
+      flex-direction: row-reverse;
+    }
+
+    .msg.user .msg-avatar {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-1);
+    }
+
+    .msg-bubble {
+      font-size: 13.5px;
+      line-height: 1.65;
+      color: var(--text-ash);
+      max-width: 85%;
+    }
+
+    .msg.assistant .msg-bubble {
+      background: transparent;
+      padding: 2px 0;
+    }
+
+    .msg.user .msg-bubble {
+      background: var(--user-bubble);
+      padding: 8px 11px;
+      border-radius: 14px;
+      border-top-right-radius: 4px;
+    }
+
+    .chat-suggestions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      padding: 3px 18px 14px;
+    }
+
+    .chip {
+      font-size: 11.5px;
+      padding: 7px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      color: var(--text-1);
+      background: var(--bg-raised);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .chip:hover {
+      border-color: var(--border-strong);
+      color: var(--text-0);
+      background: var(--bg-input);
+      transform: translateY(-1px);
+    }
+
+    .chat-input-row {
+      padding: 12px 18px 18px;
+    }
+
+    .chat-input-shell {
+      display: flex;
+      align-items: flex-end;
+      gap: 8px;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 8px 8px 8px 16px;
+      transition: border-color 0.15s ease;
+    }
+
+    .chat-input-shell:focus-within {
+      border-color: var(--border-strong);
+    }
+
+    .chat-input-shell input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      padding: 8px 0;
+      color: var(--text-ash);
+      font-size: 13.5px;
+      font-family: Inter, sans-serif;
+      outline: none;
+    }
+
+    .chat-input-shell input::placeholder {
+      color: var(--text-2);
+    }
+
+    .chat-send {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      border: none;
+      cursor: pointer;
+      background: var(--accent);
+      color: var(--accent-ink);
+      font-weight: 700;
+      display: grid;
+      place-items: center;
+      flex: 0 0 auto;
+      transition: background 0.15s ease, opacity 0.15s ease, transform 0.15s ease;
+      font-size: 12.5px;
+    }
+
+    .chat-send:hover {
+      background: var(--accent-strong);
+      transform: scale(1.04);
+    }
+
+    .chat-send:disabled {
+      opacity: 0.4;
+      cursor: default;
+      transform: none;
+    }
+
+    .typing-dots {
+      display: flex;
+      gap: 4px;
+      padding: 4px 0;
+    }
+
+    .typing-dots span {
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: var(--text-2);
+      animation: blink 1.2s infinite ease-in-out;
+    }
+
+    .typing-dots span:nth-child(2) {
+      animation-delay: 0.2s;
+    }
+
+    .typing-dots span:nth-child(3) {
+      animation-delay: 0.4s;
+    }
+
+    @keyframes blink {
+
+      0%,
+      80%,
+      100% {
+        opacity: 0.25;
+      }
+
+      40% {
+        opacity: 1;
+      }
+    }
+
+    .loader-circle {
+      width: 11px;
+      height: 11px;
+      border: 2px solid var(--text-2);
+      border-top-color: var(--accent-strong);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      display: inline-block;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    @media (max-width: 1200px) {
+      .main {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto minmax(440px, 1fr) 420px;
+      }
+
+      .main.sidebar-collapsed {
+        grid-template-rows: auto minmax(440px, 1fr) 420px;
+      }
+
+      .legend {
+        width: min(240px, calc(100vw - 32px));
+      }
+
+      .map-overlay {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 720px) {
+      .app-shell {
+        padding: 8px;
+        gap: 8px;
+      }
+
+      .topbar {
+        padding: 11px 13px;
+      }
+
+      .kpi-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Map Click-to-Inspect Popup */
+    .leaflet-popup-content-wrapper {
+      background: var(--bg-panel);
+      color: var(--text-0);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-mat);
+      border: 1px solid var(--border-strong);
+      padding: 0;
+    }
+    .leaflet-popup-tip-container {
+      width: 24px;
+      height: 12px;
+    }
+    .leaflet-popup-tip {
+      background: var(--bg-panel);
+      border-left: 1px solid var(--border-strong);
+      border-top: 1px solid var(--border-strong);
+      box-shadow: none;
+    }
+    .leaflet-popup-content {
+      margin: 12px 14px;
+      line-height: 1.4;
+      font-family: Inter, sans-serif;
+    }
+    .leaflet-container a.leaflet-popup-close-button {
+      color: var(--text-2);
+      padding: 6px 6px 0 0;
+    }
+    .leaflet-container a.leaflet-popup-close-button:hover {
+      color: var(--text-0);
+    }
+    .inspect-popup {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-width: 200px;
+    }
+    .inspect-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+    }
+    .inspect-icon {
+      color: var(--text-2);
+      width: 14px;
+      height: 14px;
+      flex: 0 0 auto;
+      margin-top: 2px;
+    }
+    .inspect-data {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .inspect-label {
+      font-size: 8.5px;
+      color: var(--text-2);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .inspect-value {
+      font-size: 11.5px;
+      font-weight: 500;
+      color: var(--text-0);
+    }
+    .inspect-skeleton {
+      background: linear-gradient(90deg, var(--bg-raised) 25%, var(--bg-input) 50%, var(--bg-raised) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite linear;
+      border-radius: 4px;
+      height: 12px;
+      width: 100%;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark"></div>
+        <div class="brand-copy">
+          <div class="brand-title">Thermal Intelligence</div>
+          <div class="brand-sub">Landsat ST_B10 · startup batch</div>
+        </div>
+      </div>
+      <div class="topbar-status">
+        <span class="status-dot {% if thermal_meta %}on{% endif %}"></span>
+        <span>{% if thermal_meta %}Overlay ready{% else %}Awaiting data{% endif %}</span>
+      </div>
+      <div class="top-links">
+        <a href="/app1/">App 1</a>
+        <a href="/app2/">App 2</a>
+        <a href="/app3/" class="active">App 3</a>
+        <a href="/app4/">App 4</a>
+      </div>
+    </header>
+
+    <main class="main" id="mainGrid">
+      <section class="panel sidebar" id="sidebar">
+        <div class="panel-head sidebar-panel-head">
+          <div class="sidebar-head-copy">
+            <div class="panel-title">Processing Status</div>
+            {% if thermal_meta %}
+            <div class="panel-subtitle">Heat overlay ready and rendered on the satellite map.</div>
+            {% else %}
+            <div class="panel-subtitle">No raster metadata is loaded yet. Set the Landsat path and restart the app.
+            </div>
+            {% endif %}
+          </div>
+          <button class="sidebar-toggle-btn" id="sidebarToggle" title="Collapse sidebar" aria-label="Collapse sidebar"
+            aria-expanded="true">‹</button>
+        </div>
+
+        <div class="sidebar-scroll">
+          <div class="kpi-grid">
+            <div class="kpi">
+              <div class="kpi-name">Min Temp</div>
+              <div class="kpi-num">{% if thermal_meta %}{{ thermal_meta.temperature_celsius.min }}°C{% else %}--{% endif
+                %}</div>
+            </div>
+            <div class="kpi">
+              <div class="kpi-name">Max Temp</div>
+              <div class="kpi-num">{% if thermal_meta %}{{ thermal_meta.temperature_celsius.max }}°C{% else %}--{% endif
+                %}</div>
+            </div>
+            <div class="kpi">
+              <div class="kpi-name">Temp Range</div>
+              <div class="kpi-num">{% if thermal_meta %}{{ (thermal_meta.temperature_celsius.max -
+                thermal_meta.temperature_celsius.min) | round(1) }}°C{% else %}--{% endif %}</div>
+            </div>
+            <div class="kpi">
+              <div class="kpi-name">Valid Pixels</div>
+              <div class="kpi-num">{% if thermal_meta %}{{ "{:,}".format(thermal_meta.valid_pixel_count) }}{% else
+                %}--{% endif %}</div>
+            </div>
+            <div class="kpi">
+              <div class="kpi-name">Lat Span</div>
+              <div class="kpi-num">{% if thermal_meta %}{{ (thermal_meta.bounds.max_lat - thermal_meta.bounds.min_lat) |
+                round(3) }}°{% else %}--{% endif %}</div>
+            </div>
+            <div class="kpi">
+              <div class="kpi-name">Lon Span</div>
+              <div class="kpi-num">{% if thermal_meta %}{{ (thermal_meta.bounds.max_lon - thermal_meta.bounds.min_lon) |
+                round(3) }}°{% else %}--{% endif %}</div>
+            </div>
+          </div>
+
+          <div class="stats" style="padding-top: 0;">
+            <div class="stat">
+              <div class="stat-label">Scene Center</div>
+              <div class="stat-value" style="font-size: 11px; font-family: 'JetBrains Mono', monospace;">{% if
+                thermal_meta %}{{ thermal_meta.center.lat | round(4) }}, {{ thermal_meta.center.lon | round(4) }}{% else
+                %}--{% endif %}</div>
+              <div class="stat-meta">Latitude, longitude of the raster's geographic centroid.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel map-panel">
+        {% if thermal_meta %}
+        <div id="map"></div>
+        <div class="draw-selection" id="drawSelection"></div>
+        <div class="toast" id="toast"></div>
+        <div class="map-overlay">
+          <div class="overlay-card">
+            <div class="badge">Startup processed</div>
+            <strong>Heat image rendered on the satellite map</strong>
+            <span>The overlay is aligned to the raster bounds and loaded from the static output generated at app
+              startup.</span>
+          </div>
+          <div class="overlay-card">
+            <strong>Coverage</strong>
+            <span>Lat: {{ thermal_meta.bounds.min_lat | round(4) }} to {{ thermal_meta.bounds.max_lat | round(4)
+              }}<br />Lon: {{ thermal_meta.bounds.min_lon | round(4) }} to {{ thermal_meta.bounds.max_lon | round(4)
+              }}</span>
+          </div>
+          <div class="overlay-card hud-card">
+            <div class="hud-row">
+              <svg class="hud-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="9" />
+                <path d="M12 7v5l3.2 2" />
+              </svg>
+              <span class="hud-text-group">
+                <span class="hud-label">Scene Time</span>
+                <span class="hud-value" id="hudTime">--:--</span>
+              </span>
+            </div>
+            <div class="hud-row">
+              <svg class="hud-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 14.8V4.5a2 2 0 1 0-4 0v10.3a4 4 0 1 0 4 0z" />
+              </svg>
+              <span class="hud-text-group">
+                <span class="hud-label">Conditions</span>
+                <span class="hud-value" id="hudWeatherText">--</span>
+              </span>
+            </div>
+          </div>
+        </div>
+        <div class="map-toolbar">
+          <button class="toolbar-btn" id="drawBtn" title="Draw a section to save as a tile image">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 20h9" />
+              <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+            </svg>
+          </button>
+          <button class="toolbar-btn" id="undoHeatBtn" title="Hide heat overlay" disabled>↺</button>
+          <button class="toolbar-btn" id="redoHeatBtn" title="Show heat overlay" disabled>↻</button>
+        </div>
+        <div class="legend">
+          <div class="legend-title">Land Surface Temperature (°C)</div>
+          <div class="legend-bar"></div>
+          <div class="legend-scale"><span>{{ thermal_meta.temperature_celsius.min }}°C</span><span>{{
+              thermal_meta.temperature_celsius.max }}°C</span></div>
+          <div class="legend-labels"><span>Coldest</span><span>Hottest</span></div>
+        </div>
+        {% else %}
+        <div class="no-data">
+          <div class="no-data-card">
+            <strong>No thermal raster loaded</strong>
+            <p>The dashboard rendered successfully, but the Landsat file was not found. Set
+              <code>LANDSAT_B10_PATH</code> in your <code>.env</code> to a project-relative path using forward slashes,
+              e.g. <code>Data/Data/Data/LC08_L2SP_139044_20260601_20260612_02_T1_ST_B10.tiff</code>, then restart the
+              app.
+            </p>
+          </div>
+        </div>
+        {% endif %}
+      </section>
+
+      <section class="panel chat-panel">
+        <div class="panel-head">
+          <div class="panel-title">Scene Assistant</div>
+          <div class="panel-subtitle">Ask about the loaded thermal scene.</div>
+        </div>
+        <div class="chat-messages" id="chatMessages">
+          <div class="msg assistant">
+            <div class="msg-avatar">AI</div>
+            <div class="msg-bubble">
+              {% if thermal_meta %}
+              Hey — I'm looking at <strong>The map</strong>. Ask me about the min/max
+              temperature, coverage area, or pixel count.
+              {% else %}
+              No thermal scene is loaded right now, so I don't have data to discuss yet. Once a raster is processed, ask
+              me anything about it.
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        <div class="chat-suggestions">
+          <div class="chip" data-q="What's the hottest temperature in this scene?">Hottest area?</div>
+          <div class="chip" data-q="What area does this scene cover?">Coverage area?</div>
+          <div class="chip" data-q="How many valid pixels are there?">Valid pixels?</div>
+        </div>
+        <div class="chat-input-row">
+          <div class="chat-input-shell">
+            <input id="chatInput" type="text" placeholder="Ask about this scene…" autocomplete="off" />
+            <button class="chat-send" id="chatSend" aria-label="Send">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 19V5" />
+                <path d="M6 11l6-6 6 6" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    // --- Collapsible sidebar toggle ---
+    (function () {
+      const sidebar = document.getElementById('sidebar');
+      const mainGrid = document.getElementById('mainGrid');
+      const toggleBtn = document.getElementById('sidebarToggle');
+
+      toggleBtn.addEventListener('click', () => {
+        const collapsed = sidebar.classList.toggle('collapsed');
+        mainGrid.classList.toggle('sidebar-collapsed', collapsed);
+        toggleBtn.setAttribute('aria-expanded', String(!collapsed));
+        toggleBtn.title = collapsed ? 'Expand sidebar' : 'Collapse sidebar';
+      });
+    })();
+  </script>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  {% if thermal_meta %}
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script>
+    const bounds = [
+      [{{ thermal_meta.bounds.min_lat }}, {{ thermal_meta.bounds.min_lon }}],
+    [{{ thermal_meta.bounds.max_lat }}, {{ thermal_meta.bounds.max_lon }}]
+    ];
+    const center = [{{ thermal_meta.center.lat }}, {{ thermal_meta.center.lon }}];
+
+    const map = L.map('map', { center, zoom: 9, zoomControl: true });
+
+    const satellite = L.tileLayer(
+      'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+      { attribution: 'Tiles &copy; Esri', maxZoom: 18, crossOrigin: true }
+    ).addTo(map);
+
+    const streets = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors',
+      maxZoom: 18,
+      crossOrigin: true
+    });
+
+    const thermalOverlay = L.imageOverlay('{{ thermal_meta.overlay_image_url }}', bounds, {
+      opacity: 1.0,
+      interactive: false,
+      crossOrigin: true
+    }).addTo(map);
+
+    L.control.layers(
+      { 'Satellite': satellite, 'Streets': streets },
+      { 'Land Surface Temperature': thermalOverlay },
+      { collapsed: true, position: 'topright' }
+    ).addTo(map);
+
+    map.fitBounds(bounds, { padding: [20, 20] });
+
+    // Recenter the map on resize (e.g. when the sidebar collapses/expands
+    // and the map panel changes size) so Leaflet's internal size cache
+    // stays correct.
+    const mainGridEl = document.getElementById('mainGrid');
+    mainGridEl.addEventListener('transitionend', (e) => {
+      if (e.propertyName === 'grid-template-columns') {
+        map.invalidateSize();
+      }
+    });
+
+    let inspectMarker = null;
+
+    map.on('click', async (e) => {
+      // Don't trigger if drawing
+      if (typeof drawMode !== 'undefined' && drawMode) return;
+      
+      const { lat, lng } = e.latlng;
+      
+      if (inspectMarker) {
+        map.removeLayer(inspectMarker);
+      }
+      
+      inspectMarker = L.marker([lat, lng]).addTo(map);
+      
+      const skeletonHtml = `
+        <div class="inspect-popup">
+          <div class="inspect-row">
+            <svg class="inspect-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+            <div class="inspect-data" style="width: 100%;">
+              <div class="inspect-label">Location</div>
+              <div class="inspect-skeleton"></div>
+              <div class="inspect-skeleton" style="width: 60%; margin-top: 2px;"></div>
+            </div>
+          </div>
+          <div class="inspect-row">
+            <svg class="inspect-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 14.8V4.5a2 2 0 1 0-4 0v10.3a4 4 0 1 0 4 0z"></path></svg>
+            <div class="inspect-data" style="width: 100%;">
+              <div class="inspect-label">Environment</div>
+              <div class="inspect-skeleton"></div>
+            </div>
+          </div>
+        </div>
+      `;
+      
+      inspectMarker.bindPopup(skeletonHtml, { closeButton: true, minWidth: 200 }).openPopup();
+
+      try {
+        const [geoRes, meteoRes, lstRes] = await Promise.allSettled([
+          fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`, {
+            headers: { 'User-Agent': 'UrbanHeatControlApp/1.0' }
+          }).then(r => r.json()),
+          fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current_weather=true&timezone=auto&elevation=true`).then(r => r.json()),
+          fetch(`/app3/inspect?lat=${lat}&lon=${lng}`).then(r => r.json())
+        ]);
+
+        let locationStr = "Unknown location";
+        if (geoRes.status === 'fulfilled' && geoRes.value && geoRes.value.address) {
+          const addr = geoRes.value.address;
+          const parts = [addr.city || addr.town || addr.village || addr.county, addr.state, addr.country].filter(Boolean);
+          locationStr = parts.join(', ');
+        }
+        
+        let weatherStr = "Unavailable";
+        let timeStr = "Unavailable";
+        let elevStr = "";
+        if (meteoRes.status === 'fulfilled' && meteoRes.value) {
+          const m = meteoRes.value;
+          if (m.current_weather) {
+            weatherStr = `${m.current_weather.temperature}°C, Wind ${m.current_weather.windspeed} km/h`;
+          }
+          if (m.elevation !== undefined) {
+            elevStr = `<div style="font-size: 10.5px; color: var(--text-1); margin-top: 2px;">${m.elevation}m elevation</div>`;
+          }
+          if (m.timezone) {
+            try {
+              timeStr = new Intl.DateTimeFormat('en-US', { timeStyle: 'short', timeZone: m.timezone }).format(new Date());
+              timeStr = `${timeStr} (${m.timezone})`;
+            } catch(e) {}
+          }
+        }
+        
+        let lstStr = "Unavailable";
+        if (lstRes.status === 'fulfilled' && lstRes.value && lstRes.value.lst_celsius !== null) {
+          lstStr = `${lstRes.value.lst_celsius}°C`;
+        } else {
+          lstStr = "Out of raster bounds";
+        }
+
+        const finalHtml = `
+          <div class="inspect-popup">
+            <div class="inspect-row">
+              <svg class="inspect-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+              <div class="inspect-data">
+                <div class="inspect-label">Location</div>
+                <div class="inspect-value">${locationStr}</div>
+                <div style="font-size: 9px; color: var(--text-2); font-family: 'JetBrains Mono', monospace;">${lat.toFixed(6)}, ${lng.toFixed(6)}</div>
+              </div>
+            </div>
+            <div class="inspect-row">
+              <svg class="inspect-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 14.8V4.5a2 2 0 1 0-4 0v10.3a4 4 0 1 0 4 0z"></path></svg>
+              <div class="inspect-data">
+                <div class="inspect-label">LST & Weather</div>
+                <div class="inspect-value">
+                  <span style="color: var(--accent-strong);">${lstStr} surface</span><br/>
+                  ${weatherStr} air
+                </div>
+                ${elevStr}
+              </div>
+            </div>
+            <div class="inspect-row">
+              <svg class="inspect-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3.2 2"></path></svg>
+              <div class="inspect-data">
+                <div class="inspect-label">Local Time</div>
+                <div class="inspect-value">${timeStr}</div>
+              </div>
+            </div>
+          </div>
+        `;
+        
+        if (inspectMarker && inspectMarker.getPopup().isOpen()) {
+          inspectMarker.setPopupContent(finalHtml);
+        }
+      } catch (err) {
+        console.error("Inspect fetch error:", err);
+      }
+    });
+
+    // Tiny undo/redo buttons: undo hides the heat overlay, redo brings it
+    // back - a quick one-step toggle rather than a full history stack.
+    const undoHeatBtn = document.getElementById('undoHeatBtn');
+    const redoHeatBtn = document.getElementById('redoHeatBtn');
+    let heatVisible = true;
+
+    function syncHeatButtons() {
+      undoHeatBtn.disabled = !heatVisible;
+      redoHeatBtn.disabled = heatVisible;
+      undoHeatBtn.dataset.active = String(heatVisible);
+    }
+    syncHeatButtons();
+
+    undoHeatBtn.addEventListener('click', () => {
+      if (!heatVisible) return;
+      map.removeLayer(thermalOverlay);
+      heatVisible = false;
+      syncHeatButtons();
+    });
+
+    redoHeatBtn.addEventListener('click', () => {
+      if (heatVisible) return;
+      thermalOverlay.addTo(map);
+      heatVisible = true;
+      syncHeatButtons();
+    });
+
+
+    const mapEl = document.getElementById('map');
+    const drawBtn = document.getElementById('drawBtn');
+    const selectionBox = document.getElementById('drawSelection');
+    const toastEl = document.getElementById('toast');
+
+    let drawMode = false;
+    let dragging = false;
+    let startPt = null;
+
+    function showToast(text, isError) {
+      toastEl.textContent = text;
+      toastEl.style.color = isError ? '#f87171' : 'var(--text-0)';
+      toastEl.classList.add('show');
+      clearTimeout(showToast._t);
+      showToast._t = setTimeout(() => toastEl.classList.remove('show'), 2600);
+    }
+
+    function setDrawMode(active) {
+      drawMode = active;
+      drawBtn.dataset.active = String(active);
+      mapEl.classList.toggle('draw-active', active);
+      if (active) {
+        map.dragging.disable();
+        map.doubleClickZoom.disable();
+      } else {
+        map.dragging.enable();
+        map.doubleClickZoom.enable();
+      }
+    }
+
+    drawBtn.addEventListener('click', () => setDrawMode(!drawMode));
+
+    mapEl.addEventListener('mousedown', (e) => {
+      if (!drawMode) return;
+      dragging = true;
+      const rect = mapEl.getBoundingClientRect();
+      startPt = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+      Object.assign(selectionBox.style, {
+        display: 'block', left: startPt.x + 'px', top: startPt.y + 'px', width: '0px', height: '0px'
+      });
+    });
+
+    mapEl.addEventListener('mousemove', (e) => {
+      if (!drawMode || !dragging || !startPt) return;
+      const rect = mapEl.getBoundingClientRect();
+      const curX = e.clientX - rect.left;
+      const curY = e.clientY - rect.top;
+      const x = Math.min(startPt.x, curX);
+      const y = Math.min(startPt.y, curY);
+      const w = Math.abs(curX - startPt.x);
+      const h = Math.abs(curY - startPt.y);
+      Object.assign(selectionBox.style, { left: x + 'px', top: y + 'px', width: w + 'px', height: h + 'px' });
+    });
+
+    window.addEventListener('mouseup', async (e) => {
+      if (!drawMode || !dragging) return;
+      dragging = false;
+      const box = selectionBox.getBoundingClientRect();
+      const mapRect = mapEl.getBoundingClientRect();
+      selectionBox.style.display = 'none';
+      setDrawMode(false);
+
+      const cropX = box.left - mapRect.left;
+      const cropY = box.top - mapRect.top;
+      const cropW = box.width;
+      const cropH = box.height;
+
+      if (cropW < 16 || cropH < 16) return; // ignore accidental clicks
+
+      await captureAndSave(cropX, cropY, cropW, cropH);
+    });
+
+    async function captureAndSave(x, y, w, h) {
+      showToast('Capturing selected area…', false);
+      try {
+        const rendered = await html2canvas(mapEl, {
+          x, y, width: w, height: h,
+          useCORS: true,
+          backgroundColor: null,
+          logging: false
+        });
+
+        // Pad the crop onto a square canvas (tile shape) before upload -
+        // the server also enforces this, but doing it client-side keeps
+        // the preview/upload size predictable.
+        const side = Math.max(rendered.width, rendered.height);
+        const square = document.createElement('canvas');
+        square.width = side;
+        square.height = side;
+        const ctx = square.getContext('2d');
+        ctx.fillStyle = '#0b0b0f';
+        ctx.fillRect(0, 0, side, side);
+        ctx.drawImage(rendered, (side - rendered.width) / 2, (side - rendered.height) / 2);
+
+        const dataUrl = square.toDataURL('image/png');
+
+        const resp = await fetch('/app3/save-map-image', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ image: dataUrl })
+        });
+        const data = await resp.json();
+        if (data.success) {
+          showToast('Saved to .map_image/' + data.filename, false);
+        } else {
+          showToast(data.error || 'Could not save the image.', true);
+        }
+      } catch (err) {
+        showToast('Capture failed (tile source may block cross-origin capture).', true);
+      }
+    }
+
+    // --- Compact HUD: scene-local time + current conditions ---
+    // Uses the scene's own centroid (already computed server-side) so the
+    // reading matches the geography being inspected, not the viewer's
+    // browser location. Best-effort only: falls back to placeholders if
+    // the network request fails, and never blocks the rest of the UI.
+    (function loadSceneConditions() {
+      const hudTimeEl = document.getElementById('hudTime');
+      const hudWeatherTextEl = document.getElementById('hudWeatherText');
+
+      fetch(`https://api.open-meteo.com/v1/forecast?latitude=${center[0]}&longitude=${center[1]}&current_weather=true&timezone=auto`)
+        .then((r) => r.json())
+        .then((data) => {
+          const cw = data.current_weather;
+          if (cw) {
+            hudWeatherTextEl.textContent = Math.round(cw.temperature) + '°C';
+          }
+          const utcOffsetSec = data.utc_offset_seconds || 0;
+          function tick() {
+            const now = new Date(Date.now() + utcOffsetSec * 1000);
+            const hh = String(now.getUTCHours()).padStart(2, '0');
+            const mm = String(now.getUTCMinutes()).padStart(2, '0');
+            hudTimeEl.textContent = `${hh}:${mm}`;
+          }
+          tick();
+          setInterval(tick, 15000);
+        })
+        .catch(() => {
+          hudWeatherTextEl.textContent = 'N/A';
+          hudTimeEl.textContent = '--:--';
+        });
+    })();
+  </script>
+  {% endif %}
+
+  <script>
+    // --- Chat panel wiring ---
+    const chatMessages = document.getElementById('chatMessages');
+    const chatInput = document.getElementById('chatInput');
+    const chatSend = document.getElementById('chatSend');
+    let history = [];
+    let sending = false;
+
+    function addMessage(role, text) {
+      const wrap = document.createElement('div');
+      wrap.className = 'msg ' + role;
+      const avatar = document.createElement('div');
+      avatar.className = 'msg-avatar';
+      avatar.textContent = role === 'user' ? 'You' : 'AI';
+      const bubble = document.createElement('div');
+      bubble.className = 'msg-bubble';
+      bubble.textContent = text;
+      wrap.appendChild(avatar);
+      wrap.appendChild(bubble);
+      chatMessages.appendChild(wrap);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+      return bubble;
+    }
+
+    function addTyping() {
+      const wrap = document.createElement('div');
+      wrap.className = 'msg assistant';
+      wrap.id = 'typingIndicator';
+      wrap.innerHTML = '<div class="msg-avatar">AI</div><div class="msg-bubble"><div class="loader-circle"></div></div>';
+      chatMessages.appendChild(wrap);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    function removeTyping() {
+      const el = document.getElementById('typingIndicator');
+      if (el) el.remove();
+    }
+
+    async function sendMessage(text) {
+      if (!text || sending) return;
+      sending = true;
+      chatSend.disabled = true;
+      addMessage('user', text);
+      history.push({ role: 'user', content: text });
+      addTyping();
+
+      try {
+        const resp = await fetch('/app3/chat/stream', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: text, history })
+        });
+
+        removeTyping();
+
+        if (!resp.ok) throw new Error('Network error');
+
+        const reader = resp.body.getReader();
+        const decoder = new TextDecoder();
+        let bubble = addMessage('assistant', '');
+        let fullReply = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          const chunk = decoder.decode(value, { stream: true });
+          fullReply += chunk;
+          bubble.textContent = fullReply;
+          chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        history.push({ role: 'assistant', content: fullReply });
+      } catch (err) {
+        removeTyping();
+        addMessage('assistant', "The chat service isn't reachable right now.");
+      } finally {
+        sending = false;
+        chatSend.disabled = false;
+      }
+    }
+
+    chatSend.addEventListener('click', () => {
+      const text = chatInput.value.trim();
+      chatInput.value = '';
+      sendMessage(text);
+    });
+
+    chatInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        const text = chatInput.value.trim();
+        chatInput.value = '';
+        sendMessage(text);
+      }
+    });
+
+    document.querySelectorAll('.chip').forEach((chip) => {
+      chip.addEventListener('click', () => sendMessage(chip.dataset.q));
+    });
+  </script>
+</body>
+
+</html>
