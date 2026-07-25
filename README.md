@@ -9,6 +9,11 @@ West Bengal Land Surface Temperature Viewer (FastAPI)
 
 ## Setup
 
+```
+craete .env file
+
+add GROQ_API_KEY=""
+```
 ```bash
 python -m venv .venv
 
