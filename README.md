@@ -31,15 +31,7 @@ uvicorn Main.run:app --reload --port 8000
 
 
 - check feature_to_add.md file we need to implement this features step by step in our project
+
 - then implement this features step by step 
 
 
-
-Put your Landsat `..._ST_B10.TIF` file somewhere accessible, then either:
-
-- drop it at `./data/LC08_L2SP_139044_20260601_20260612_02_T1_ST_B10.TIF`, or
-- point `app.py` at it via an environment variable:
-
-```bash
-export LANDSAT_B10_PATH=/path/to/your_ST_B10.TIF   # (Windows: set LANDSAT_B10_PATH=...)
-```
