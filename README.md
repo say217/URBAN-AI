@@ -1,6 +1,12 @@
 # URBAN AI
 West Bengal Land Surface Temperature Viewer (FastAPI)
 
+<img width="1526" height="735" alt="image" src="https://github.com/user-attachments/assets/5688364c-955d-4125-8304-0310d1d3fb71" />
+
+
+
+- check Features.md file we need to implement this features step by step in our project
+
 ## Setup
 
 ```bash
